@@ -154,8 +154,13 @@ config = populate_defaults(config)
 # Set device
 if len(config.device) > 0:
     if "CUDA_VISIBLE_DEVICES" not in os.environ:
+        print("PyTorch version:", torch.__version__)
+        print("Is CUDA available:", torch.cuda.is_available())
+        print("CUDA version:", torch.version.cuda)
         device_str = ",".join(map(str, config.device))
         os.environ["CUDA_VISIBLE_DEVICES"] = device_str
+        print(f"Setting CUDA_VISIBLE_DEVICES to {device_str}")
+        torch.cuda.init()
         device_count = torch.cuda.device_count()
         if len(config.device) > device_count:
             raise ValueError(f"Specified {len(config.device)} devices, but only {device_count} devices found.")
@@ -176,7 +181,7 @@ from algorithms.initializer import initialize_algorithm
 from imagenet import ImageNet
 from models.initializer import get_dataset
 from train import evaluate, train
-from transforms import initialize_transform
+from transforms import initialize_transform, VLM_transforms
 from utils import (BatchLogger, Logger, get_model_prefix, initialize_wandb,
                    load, log_config, log_group_data, move_to, set_seed)
 
@@ -268,6 +273,10 @@ def main():
             _, preprocess = clip.load('RN50')
         else:
             _, preprocess = clip.load('ViT-L/14@336px')
+        train_transform = preprocess
+        eval_transform = preprocess
+    elif not config.reg_preprocess:
+        preprocess = VLM_transforms(config.model, full_dataset._original_resolution)
         train_transform = preprocess
         eval_transform = preprocess
     else:

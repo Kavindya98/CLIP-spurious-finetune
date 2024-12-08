@@ -44,7 +44,7 @@ transforms = ['image_base', 'image_resize', 'image_resize_and_center_crop', 'pov
 additional_transforms = ['randaugment', 'weak']
 
 # See models/initializer.py
-models = ['clip-rn50', 'clip-vit']
+models = ['clip-rn50', 'clip-vit','slip','alip']
 
 # See optimizer.py
 optimizers = ['SGD', 'Adam']

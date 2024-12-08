@@ -57,7 +57,7 @@ def initialize_model(config, d_out, is_featurizer=False, metadata_map=None):
             model = initialize_clip_model(config)
 
     else:
-        raise ValueError(f'Model: {config.model} not recognized.')
+        model = initialize_vlm_model(config)
 
     # Recombine model if we originally split it up just for loading
     if featurize and not is_featurizer:
@@ -124,11 +124,46 @@ def initialize_clip_model(config, featurize=False):
     if featurize:
         if config.finetuning == 'zeroshot':
             return ImageEncoder(featurizer), ZeroShotClassifier(featurizer, dataset.metadata_map, templates=templates)
+            print("Featurizer and ZeroShotClassifier initialized.")
         else:
             return ImageEncoder(featurizer), nn.Linear(featurizer.visual.output_dim, len(dataset.metadata_map['y']))
+            print("Seperate featurizer and classifier initialized.")
     else:
         if config.finetuning == 'zeroshot':
             model = ZeroShotCLIP(featurizer, dataset.metadata_map, templates=templates)
+            print("ZeroShotCLIP model initialized.")
         else:
             model = LinearProbCLIP(featurizer, dataset.metadata_map, templates=templates)
+            print("LinearProbCLIP model initialized.")
         return model
+
+
+def initialize_vlm_model(config, featurize=False):
+    from models.vlm import SLIP_ZeroShot, ALIP_ZeroShot
+    dataset = get_dataset(
+        dataset=config.dataset,
+        version=config.version,
+        root_dir=config.root_dir,
+        download=config.download,
+        split_scheme=config.split_scheme,
+        imagenet_class=config.imagenet_class,
+        seed=config.seed,
+        **config.dataset_kwargs)
+    dataset.metadata_map.pop('from_source_domain')
+
+    if config.num_templates == 'all':
+        templates = imagenet_templates
+    elif config.num_templates == '2':
+        templates = ['a photo of the {}.', 'a photo of a {}.',]
+    else:
+        templates = imagenet_templates[:int(config.num_templates)]
+    
+    if config.model == 'slip':
+        model = SLIP_ZeroShot(dataset.metadata_map, templates=templates)
+    elif config.model == 'alip':
+        model = ALIP_ZeroShot(dataset.metadata_map, templates=templates)
+    else:
+        raise ValueError(f'Model: {config.model} not recognized.')
+
+
+    return model

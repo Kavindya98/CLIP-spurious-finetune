@@ -56,14 +56,16 @@ python tools/detection_command_launchers.py --device 0 1 3 4 --class_rank_range 
 
 Evaluate the pre-trained models
 ```
-python run_expt.py --dataset waterbirds --algorithm ERM --model clip-vit --root_dir data --device 0 --seed 11111111 --use_wandb --eval_only --eval_split test --eval_epoch -1
+python run_expt.py --dataset waterbirds --algorithm ERM --model clip-vit --root_dir /media/SSD2/Dataset --device 0 --seed 11111111 --use_wandb --eval_only --eval_split test --eval_epoch -1
 ```
 
 Train the models
 ```
-python run_expt.py  --dataset waterbirds --algorithm Multimodal --model clip-rn50 --root_dir data --device 0 --freeze_language --freeze_vision --train_projection --seed 11111111 --batch_size 128 --n_epochs 300 --class_weight 0 --clip_weight 1.0 --image_weight 1.0 --language_weight 1.0 --domain_weight 0.0 --spurious_weight 0.0 --spurious_class_weight 1.0 --spurious_clip_weight 0.0 --crossmodal_weight 0.0 --pos_weight 1.0 --neg_weight 1.0 --weight_decay 1e-5 --lr 1e-4 --use_wandb --download=True
+python run_expt.py  --dataset waterbirds --algorithm Multimodal --model clip-rn50 --root_dir /media/SSD2/Dataset --device 0 --freeze_language --freeze_vision --train_projection --seed 11111111 --batch_size 128 --n_epochs 300 --class_weight 0 --clip_weight 1.0 --image_weight 1.0 --language_weight 1.0 --domain_weight 0.0 --spurious_weight 0.0 --spurious_class_weight 1.0 --spurious_clip_weight 0.0 --crossmodal_weight 0.0 --pos_weight 1.0 --neg_weight 1.0 --weight_decay 1e-5 --lr 1e-4 --use_wandb --download=True
 ```
+python run_expt.py  --dataset waterbirds --algorithm Multimodal --model clip-vit --root_dir /media/SSD2/Dataset --device 0 --freeze_language --freeze_vision --train_projection --seed 11111111 --batch_size 128 --n_epochs 300 --class_weight 0 --clip_weight 1.0 --image_weight 0.0 --language_weight 0.0 --domain_weight 0.0 --spurious_weight 0.0 --spurious_class_weight 0.0 --spurious_clip_weight 0.0 --crossmodal_weight 0.0 --pos_weight 0.0 --neg_weight 0.0 --weight_decay 1e-5 --lr 1e-4 --use_wandb --download=True
 
+python run_expt.py  --dataset waterbirds --algorithm Multimodal --model clip-rn50 --root_dir /media/SSD2/Dataset --device 1 --freeze_language --freeze_vision --train_projection --seed 11111111 --batch_size 128 --n_epochs 300 --class_weight 0 --clip_weight 1.0 --image_weight 0.0 --language_weight 0.0 --domain_weight 0.0 --spurious_weight 0.0 --spurious_class_weight 0.0 --spurious_clip_weight 0.0 --crossmodal_weight 0.0 --pos_weight 0.0 --neg_weight 0.0 --weight_decay 1e-5 --lr 1e-4 --use_wandb --download=True
 
 ## References
 * [WILDS](https://github.com/p-lambda/wilds)

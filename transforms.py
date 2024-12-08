@@ -4,6 +4,8 @@ from typing import List
 import numpy as np
 import torch
 import torchvision.transforms as transforms
+from PIL import Image
+from transformers import BlipImageProcessor, FlavaImageProcessor
 
 
 _DEFAULT_IMAGE_TENSOR_NORMALIZATION_MEAN = [0.485, 0.456, 0.406]
@@ -243,3 +245,55 @@ class MultipleTransforms(object):
 
     def __call__(self, x):
         return tuple(transform(x) for transform in self.transformations)
+
+
+def VLM_transforms(model, input_res):
+
+    if model == "slip":
+        model_transforms = transforms.Compose([
+            transforms.Resize(input_res, interpolation=Image.BICUBIC),
+            transforms.CenterCrop(input_res),
+            transforms.Lambda(lambda image: image.convert('RGB')),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                 std=[0.229, 0.224, 0.225])
+        ])
+    elif model == "alip":
+        model_transforms = transforms.Compose([
+            transforms.Resize(input_res, interpolation=transforms.InterpolationMode.BICUBIC),
+            transforms.CenterCrop(input_res),
+            transforms.Lambda(lambda image: image.convert('RGB')),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.48145466, 0.4578275, 0.40821073],
+                                std=[0.26862954, 0.26130258, 0.27577711])
+        ])
+    elif model == "flava":
+        # model_transforms = transforms.Compose([
+        #     transforms.Resize(input_res, interpolation=Image.BICUBIC),
+        #     transforms.CenterCrop(input_res),
+        #     transforms.Lambda(lambda image: image.convert('RGB')),
+        #     transforms.ToTensor(),
+        #     transforms.Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711)),
+        # ])
+        model_transforms = FlavaImageProcessor(size=input_res)
+    elif model == "laclip":
+        model_transforms = transforms.Compose([
+            transforms.Resize(input_res, interpolation=transforms.InterpolationMode.BICUBIC),
+            transforms.CenterCrop(input_res),
+            transforms.Lambda(lambda image: image.convert('RGB')),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.48145466, 0.4578275, 0.40821073],
+                                std=[0.26862954, 0.26130258, 0.27577711])
+        ])
+    elif model == "blip":
+        model_transforms = transforms.Compose([
+            transforms.Resize(input_res, interpolation=transforms.InterpolationMode.BICUBIC),
+            transforms.CenterCrop(input_res),
+            transforms.Lambda(lambda image: image.convert('RGB')),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.48145466, 0.4578275, 0.40821073],
+                                std=[0.26862954, 0.26130258, 0.27577711])
+        ])
+    else:
+        raise ValueError(f"Model: {model} not recognized.")
+    return model_transforms
