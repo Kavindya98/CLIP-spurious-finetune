@@ -145,6 +145,7 @@ def train(algorithm, datasets, general_logger, config, epoch_offset, best_val_me
     """
 
     is_best = False
+    early_stopping_epoch =0
     for epoch in range(epoch_offset, config.n_epochs):
         general_logger.write('\nEpoch [%d]:\n' % epoch)
 
@@ -166,6 +167,10 @@ def train(algorithm, datasets, general_logger, config, epoch_offset, best_val_me
         if is_best:
             best_val_metric = curr_val_metric
             general_logger.write(f'Epoch {epoch} has the best validation performance so far.\n')
+            early_stopping_epoch = 0
+        else:
+            early_stopping_epoch += 1
+            
 
         save_model_if_needed(algorithm, datasets['val'], epoch, config, is_best, best_val_metric)
         save_pred_if_needed(y_pred, datasets['val'], epoch, config, is_best)
@@ -188,6 +193,10 @@ def train(algorithm, datasets, general_logger, config, epoch_offset, best_val_me
                 wandb.log(results)
 
         general_logger.write('\n')
+
+        if early_stopping_epoch >= config.early_stopping_patience:
+            general_logger.write(f'Early stopping at epoch {epoch}.\n')
+            break
 
 
 def evaluate(algorithm, datasets, epoch, general_logger, config, is_best):

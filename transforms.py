@@ -5,7 +5,7 @@ import numpy as np
 import torch
 import torchvision.transforms as transforms
 from PIL import Image
-from transformers import BlipImageProcessor, FlavaImageProcessor
+from transformers import Blip2Processor, FlavaImageProcessor, BlipImageProcessor
 
 
 _DEFAULT_IMAGE_TENSOR_NORMALIZATION_MEAN = [0.485, 0.456, 0.406]
@@ -246,6 +246,35 @@ class MultipleTransforms(object):
     def __call__(self, x):
         return tuple(transform(x) for transform in self.transformations)
 
+class BlipTransform:
+    def __init__(self, processor, input_res):
+        self.processor = processor
+        self.input_res = input_res
+
+    def __call__(self, img):
+        # Assuming that the processor expects a PIL Image and returns a dictionary
+        # with processed outputs including 'pixel_values'.
+        img = img.convert("RGB")
+        processed = self.processor(images=img, size=self.input_res)
+        processed = torch.tensor(np.array(processed['pixel_values']))
+        return processed
+    
+class FlavaTransform:
+    def __init__(self, input_res):
+        self.processor = FlavaImageProcessor(size=input_res)
+        self.input_res = input_res
+        
+
+    def __call__(self, img):
+        # Assuming that the processor expects a PIL Image and returns a dictionary
+        # with processed outputs including 'pixel_values'.
+        
+        img = img.convert("RGB")
+        processed = self.processor(img)
+        processed = torch.tensor(np.array(processed['pixel_values']))
+        processed = processed.reshape(-1, 3, self.input_res[0], self.input_res[0])
+        
+        return processed
 
 def VLM_transforms(model, input_res):
 
@@ -267,16 +296,8 @@ def VLM_transforms(model, input_res):
             transforms.Normalize(mean=[0.48145466, 0.4578275, 0.40821073],
                                 std=[0.26862954, 0.26130258, 0.27577711])
         ])
-    elif model == "flava":
-        # model_transforms = transforms.Compose([
-        #     transforms.Resize(input_res, interpolation=Image.BICUBIC),
-        #     transforms.CenterCrop(input_res),
-        #     transforms.Lambda(lambda image: image.convert('RGB')),
-        #     transforms.ToTensor(),
-        #     transforms.Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711)),
-        # ])
-        model_transforms = FlavaImageProcessor(size=input_res)
-    elif model == "laclip":
+    
+    elif model == "lacli":
         model_transforms = transforms.Compose([
             transforms.Resize(input_res, interpolation=transforms.InterpolationMode.BICUBIC),
             transforms.CenterCrop(input_res),
@@ -286,13 +307,15 @@ def VLM_transforms(model, input_res):
                                 std=[0.26862954, 0.26130258, 0.27577711])
         ])
     elif model == "blip":
+        # lesforce/blip2-
+        #model_transforms = BlipImageProcessor(size=input_res)
+        processor = Blip2Processor.from_pretrained("Salesforce/blip2-opt-2.7b")
         model_transforms = transforms.Compose([
-            transforms.Resize(input_res, interpolation=transforms.InterpolationMode.BICUBIC),
-            transforms.CenterCrop(input_res),
-            transforms.Lambda(lambda image: image.convert('RGB')),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.48145466, 0.4578275, 0.40821073],
-                                std=[0.26862954, 0.26130258, 0.27577711])
+            BlipTransform(processor, input_res)
+        ])
+    elif model == "flava":
+        model_transforms = transforms.Compose([
+            FlavaTransform(input_res)
         ])
     else:
         raise ValueError(f"Model: {model} not recognized.")

@@ -140,6 +140,7 @@ parser.add_argument('--save_pred', type=parse_bool, const=True, nargs='?', defau
 parser.add_argument('--no_group_logging', type=parse_bool, const=True, nargs='?')
 parser.add_argument('--progress_bar', type=parse_bool, const=True, nargs='?', default=False)
 parser.add_argument('--resume', type=parse_bool, const=True, nargs='?', default=False, help='Whether to resume from the most recent saved model in the current log_dir.')
+parser.add_argument('--early_stopping_patience', default=200, type=int)
 
 # Weights & Biases
 parser.add_argument('--use_wandb', type=parse_bool, const=True, nargs='?', default=False)
@@ -160,13 +161,13 @@ if len(config.device) > 0:
         device_str = ",".join(map(str, config.device))
         os.environ["CUDA_VISIBLE_DEVICES"] = device_str
         print(f"Setting CUDA_VISIBLE_DEVICES to {device_str}")
-        torch.cuda.init()
+        #torch.cuda.init()
         device_count = torch.cuda.device_count()
         if len(config.device) > device_count:
             raise ValueError(f"Specified {len(config.device)} devices, but only {device_count} devices found.")
 
     config.use_data_parallel = len(config.device) > 1
-    config.device = torch.device("cuda")
+    config.device = torch.device("cuda")                   
 else:
     config.use_data_parallel = False
     config.device = torch.device("cpu")
@@ -279,6 +280,7 @@ def main():
         preprocess = VLM_transforms(config.model, full_dataset._original_resolution)
         train_transform = preprocess
         eval_transform = preprocess
+        print(eval_transform)
     else:
         train_transform = initialize_transform(
             transform_name=config.transform,

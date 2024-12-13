@@ -139,7 +139,7 @@ def initialize_clip_model(config, featurize=False):
 
 
 def initialize_vlm_model(config, featurize=False):
-    from models.vlm import SLIP_ZeroShot, ALIP_ZeroShot
+    from models.vlm import SLIP_ZeroShot, ALIP_ZeroShot, LaClip_ZeroShot, BLIP_ZeroShot, Flava_ZeroShot
     dataset = get_dataset(
         dataset=config.dataset,
         version=config.version,
@@ -162,6 +162,12 @@ def initialize_vlm_model(config, featurize=False):
         model = SLIP_ZeroShot(dataset.metadata_map, templates=templates)
     elif config.model == 'alip':
         model = ALIP_ZeroShot(dataset.metadata_map, templates=templates)
+    elif config.model == 'lacli':
+        model = LaClip_ZeroShot(dataset.metadata_map, templates=templates)
+    elif config.model == 'blip':
+        model = BLIP_ZeroShot(dataset.metadata_map, templates=templates)
+    elif config.model == 'flava':
+        model = Flava_ZeroShot(dataset.metadata_map, templates=templates)
     else:
         raise ValueError(f'Model: {config.model} not recognized.')
 
