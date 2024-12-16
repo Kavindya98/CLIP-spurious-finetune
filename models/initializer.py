@@ -22,6 +22,12 @@ def get_dataset(dataset, version=None, imagenet_class='baby pacifier', seed=42, 
     if dataset == 'waterbirds':
         from waterbirds_dataset import WaterbirdsDataset
         return WaterbirdsDataset(version=version, **dataset_kwargs)
+    elif dataset == 'waterbirds_robust':
+        from waterbirds_robust_dataset import WaterbirdsRobustDataset
+        return WaterbirdsRobustDataset(version=version, **dataset_kwargs)
+    elif dataset == 'waterbirds_robust_similar':
+        from waterbirds_robust_dataset_similar import WaterbirdsRobustSimilarDataset
+        return WaterbirdsRobustSimilarDataset(version=version, **dataset_kwargs)
     elif dataset == 'imagenet':
         from imagenet import ImagenetSpurious
         return ImagenetSpurious(version=version, imagenet_class=imagenet_class, bingeval=bingeval, commercial=commercial, seed=seed, **dataset_kwargs)
@@ -97,7 +103,7 @@ def initialize_clip_model(config, featurize=False):
         featurizer, _ = clip.load('RN50')
         proj_name = 'attnpool'
     elif config.model == 'clip-vit':
-        featurizer, _ = clip.load('ViT-L/14@336px')
+        featurizer, _ = clip.load('ViT-B/32') #clip.load('ViT-L/14@336px')
     else:
         raise ValueError(f'Model: {config.model} not recognized.')
 
@@ -159,15 +165,15 @@ def initialize_vlm_model(config, featurize=False):
         templates = imagenet_templates[:int(config.num_templates)]
     
     if config.model == 'slip':
-        model = SLIP_ZeroShot(dataset.metadata_map, templates=templates)
+        model = SLIP_ZeroShot(dataset.metadata_map, templates=templates,config=config)
     elif config.model == 'alip':
-        model = ALIP_ZeroShot(dataset.metadata_map, templates=templates)
+        model = ALIP_ZeroShot(dataset.metadata_map, templates=templates, config=config)
     elif config.model == 'lacli':
-        model = LaClip_ZeroShot(dataset.metadata_map, templates=templates)
+        model = LaClip_ZeroShot(dataset.metadata_map, templates=templates, config=config)
     elif config.model == 'blip':
         model = BLIP_ZeroShot(dataset.metadata_map, templates=templates)
     elif config.model == 'flava':
-        model = Flava_ZeroShot(dataset.metadata_map, templates=templates)
+        model = Flava_ZeroShot(dataset.metadata_map, templates=templates, config=config)
     else:
         raise ValueError(f'Model: {config.model} not recognized.')
 

@@ -225,7 +225,7 @@ class LinearProbCLIP(Module):
 
     def featurizer(self, input):
         input_features = self.model.encode_image(input)
-        input_features = input_features / input_features.norm(dim=-1, keepdim=True)
+        #input_features = input_features / input_features.norm(dim=-1, keepdim=True)
         return input_features
 
     def forward(self, input, return_features=False):

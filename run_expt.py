@@ -19,7 +19,7 @@ from configs.utils import ParseKwargs, parse_bool, populate_defaults
 parser = argparse.ArgumentParser()
 
 # Required arguments
-parser.add_argument('-d', '--dataset', choices=wilds.supported_datasets+['imagenet'], required=True)
+parser.add_argument('-d', '--dataset', choices=wilds.supported_datasets+['imagenet','waterbirds_robust','waterbirds_robust_similar'], required=True)
 parser.add_argument('--num_classes', type=int, default=10, help='Maximum number of classes to have')
 parser.add_argument('--imagenet_class', type=str, default='baby pacifier', help='If use ImageNet-Spurious dataset, which ImageNet class to use.')
 parser.add_argument('--bingeval', default=False, type=parse_bool, const=True, nargs='?',
@@ -224,8 +224,10 @@ def main():
             config.log_dir += '_train-projection'
         if config.finetuning != 'zeroshot':
             config.log_dir += f'_{config.finetuning}'
+        config.log_dir += f'_opt_{config.optimizer}' 
         config.log_dir += f'_lr_{config.lr:.0e}'
-        config.log_dir += f'_wd_{config.weight_decay:.0e}'        
+        config.log_dir += f'_wd_{config.weight_decay:.0e}'
+        config.log_dir += f'_uog_{config.uniform_over_groups}'        
         if config.scheduler is not None:
             config.log_dir += f'_{config.scheduler}'
         config.log_dir += f'_batchsize_{config.batch_size}'
@@ -273,7 +275,7 @@ def main():
         if config.model == 'clip-rn50':
             _, preprocess = clip.load('RN50')
         else:
-            _, preprocess = clip.load('ViT-L/14@336px')
+            _, preprocess = clip.load('ViT-B/32')
         train_transform = preprocess
         eval_transform = preprocess
     elif not config.reg_preprocess:

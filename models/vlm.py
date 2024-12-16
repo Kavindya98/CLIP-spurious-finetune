@@ -67,7 +67,7 @@ class ZeroShotVLM(nn.Module):
 
 
 class SLIP_ZeroShot(ZeroShotVLM):
-    def __init__(self, metadata_map, templates=imagenet_templates):
+    def __init__(self, metadata_map, templates=imagenet_templates, config=None):
         ckpt = torch.load('models/weights/slip_base_100ep.pt')
         state_dict = OrderedDict()
         for k, v in ckpt['state_dict'].items():
@@ -79,6 +79,19 @@ class SLIP_ZeroShot(ZeroShotVLM):
         model = getattr(models, old_args.model)(rand_embed=False,
             ssl_mlp_dim=old_args.ssl_mlp_dim, ssl_emb_dim=old_args.ssl_emb_dim)
         model.load_state_dict(state_dict, strict=True)
+        model = utils.get_model(model)
+
+        if config.freeze_vision:
+            print("Freezing vision")
+            for param in model.visual.parameters():
+                param.requires_grad = False
+        if config.freeze_language:
+            print("Freezing language")
+            for param in model.transformer.parameters():
+                param.requires_grad = False
+        if config.train_projection:
+            print("Training projection")
+            model.image_projection.requires_grad = True
 
         tokenizer = SimpleTokenizer()
 
@@ -92,7 +105,7 @@ class SLIP_ZeroShot(ZeroShotVLM):
         for classname in classnames:
             texts = [template.format(classname) for template in self.templates] #format with class
             texts = self.tokenizer(texts).cuda() #tokenize
-            class_embeddings =  utils.get_model(self.model).encode_text(texts) #embed with text encoder
+            class_embeddings =  self.model.encode_text(texts) #embed with text encoder
             class_embeddings = class_embeddings / class_embeddings.norm(dim=-1, keepdim=True)
             if not avg:
                 zeroshot_weights.append(class_embeddings)
@@ -104,7 +117,7 @@ class SLIP_ZeroShot(ZeroShotVLM):
         return zeroshot_weights
     
     def featurizer(self, input):
-        input_features = utils.get_model(self.model).encode_image(input)
+        input_features = self.model.encode_image(input)
         input_features = input_features / input_features.norm(dim=-1, keepdim=True)
         return input_features
 
@@ -121,11 +134,25 @@ def alip_get_state_dict(model_weight):
     return state_dict_removed
 
 class ALIP_ZeroShot(ZeroShotVLM):
-    def __init__(self, metadata_map, templates=imagenet_templates):
+    def __init__(self, metadata_map, templates=imagenet_templates, config=None):
         model = create_model('ViT-B/32')
         state_dict = alip_get_state_dict('models/weights/ALIP_YFCC15M_B32.pt')
         model.load_state_dict(state_dict, strict=True)
         tokenizer = open_clip.get_tokenizer('ViT-B-32')
+
+        if config.freeze_vision:
+            print("Freezing vision")
+            for param in model.visual.parameters():
+                param.requires_grad = False
+        if config.freeze_language:
+            print("Freezing language")
+            for param in model.transformer.parameters():
+                param.requires_grad = False
+        if config.train_projection:
+            print("Training projection")
+            model.visual.proj.requires_grad = True
+
+
         super().__init__(model, metadata_map, templates, tokenizer)
 
     def zeroshot_classifier(self, classnames, avg=True):
@@ -153,7 +180,7 @@ class ALIP_ZeroShot(ZeroShotVLM):
         return input_features
     
 class LaClip_ZeroShot(ZeroShotVLM):
-    def __init__(self, metadata_map, templates=imagenet_templates):
+    def __init__(self, metadata_map, templates=imagenet_templates, config=None):
         ckpt = torch.load('models/weights/laion400m_laclip_vitb16.pt')
         state_dict = OrderedDict()
         for k, v in ckpt['state_dict'].items():
@@ -176,12 +203,26 @@ class LaClip_ZeroShot(ZeroShotVLM):
         output_dict=True,
         )
         model.load_state_dict(state_dict, strict=True)
+
+        if config.freeze_vision:
+            print("Freezing vision")
+            for param in model.visual.parameters():
+                param.requires_grad = False
+        if config.freeze_language:
+            print("Freezing language")
+            for param in model.transformer.parameters():
+                param.requires_grad = False
+        if config.train_projection:
+            print("Training projection")
+            model.visual.proj.requires_grad = True
+
         tokenizer = SimpleTokenizer()
         super().__init__(model, metadata_map, templates, tokenizer)
 
     def featurizer(self, input):
         input_features = self.model.encode_image(input)
         input_features = input_features / input_features.norm(dim=-1, keepdim=True)
+        print("Shape of input_features:", input_features.shape)
         return input_features
 
     def zeroshot_classifier(self, classnames, avg=True):
@@ -204,22 +245,36 @@ class LaClip_ZeroShot(ZeroShotVLM):
         return zeroshot_weights
 
 class Flava_ZeroShot(nn.Module):
-    def __init__(self, metadata_map, templates=imagenet_templates):
+    def __init__(self, metadata_map, templates=imagenet_templates, config=None):
         super(Flava_ZeroShot, self).__init__()
-        self.model_image = FlavaImageModel.from_pretrained("facebook/flava-full")
-        self.model_text = FlavaTextModel.from_pretrained("facebook/flava-full")
+        # self.model_image = FlavaImageModel.from_pretrained("facebook/flava-full")
+        # self.model_text = FlavaTextModel.from_pretrained("facebook/flava-full")
+        self.model = FlavaModel.from_pretrained("facebook/flava-full")
         self.metadata_map = metadata_map
         self.classnames = metadata_map['y']
         self.templates = templates
         self.logit_scale = nn.Parameter(torch.ones([]) * np.log(1 / 0.07))
         self.tokenizer =  BertTokenizerFast.from_pretrained('bert-base-uncased')
+
+        if config.freeze_vision:
+            print("Freezing vision")
+            for param in self.model.image_model.parameters():
+                param.requires_grad = False
+        if config.freeze_language:
+            print("Freezing language")
+            for param in self.model.text_model.parameters():
+                param.requires_grad = False
+        if config.train_projection:
+            print("Training projection")
+            self.model.image_model.image_projection.requires_grad = True
         
 
     def featurizer(self, input):
-        
-        input_features = self.model_image(input.squeeze(1)).pooler_output
+        #input_features = self.model_image(input.squeeze(1)).pooler_output
+        input_features = self.model.get_image_features(input.squeeze(1))
         
         input_features = input_features / input_features.norm(dim=-1, keepdim=True)
+        
         return input_features
 
     def zeroshot_classifier(self, classnames, avg=True):
@@ -231,7 +286,8 @@ class Flava_ZeroShot(nn.Module):
             texts = [template.format(classname) for template in self.templates] #format with class
             texts = self.tokenizer(texts, truncation=True, padding=True, return_tensors="pt") #tokenize
             texts = {k: torch.LongTensor(np.array(v)).cuda() for k, v in texts.items()}
-            class_embeddings =  self.model_text(**texts).pooler_output #embed with text encoder
+            class_embeddings =  self.model.get_text_features(**texts) #embed with text encoder
+            
             class_embeddings = class_embeddings / class_embeddings.norm(dim=-1, keepdim=True)
             if not avg:
                 zeroshot_weights.append(class_embeddings)
@@ -240,6 +296,7 @@ class Flava_ZeroShot(nn.Module):
                 class_embedding = class_embedding / class_embedding.norm()
                 zeroshot_weights.append(class_embedding)
         zeroshot_weights = torch.stack(zeroshot_weights, dim=1).cuda()
+       
         return zeroshot_weights
     
     def zeroshot_weights(self):
@@ -259,8 +316,8 @@ class Flava_ZeroShot(nn.Module):
             return logits
     
     def train(self, mode=True):
-        self.model_image.train(mode)
-        self.model_text.train(mode)
+        self.model.train(mode)
+        
 
 
 
